@@ -16,6 +16,10 @@ contract Data {
     }
     
 
+    function withdrawAll(address payable _to) public onlyCreator {
+        _to.transfer(address(this).balance);
+    }
+    
     
     struct Element {
         uint256 index;
