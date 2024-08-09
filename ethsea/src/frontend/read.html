@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Web3.js Event Logs</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+</head>
+<body class="bg-gray-100 text-gray-900 font-sans">
+
+    <h2 class="text-2xl font-semibold text-left text-gray-700">Read Sensor Logs</h2><br>
+    <input class="border border-gray-300 rounded p-2 mb-4 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" type="text" id="pidInput" placeholder="Enter Product ID">
+<br>
+    <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onclick="connectAndFetchLogs()">Fetch Logs</button>
+
+    <br><br>
+<style>
+
+    body {
+        padding: 10px;
+    }
+    .custom-table {
+    min-width: 100%;
+    background-color: white;
+    border: 1px solid #E5E7EB; /* Equivalent to border-gray-200 */
+    border-collapse: separate; /* Allows the border-spacing to take effect */
+    border-spacing: 5000px 0; /* Adds a 10px gap between columns, no gap between rows */
+}
+
+.custom-table thead {
+    background-color: #E5E7EB; /* Equivalent to bg-gray-200 */
+    color: #4B5563; /* Equivalent to text-gray-600 */
+}
+
+.custom-table th, 
+.custom-table td {
+    padding: 0.5rem 1rem; /* Equivalent to py-2 px-4 */
+    text-align: left; /* Equivalent to text-left */
+}
+
+.custom-table tbody tr {
+    border-top: 1px solid #E5E7EB; /* Equivalent to border-t */
+}
+
+table th,td {
+    padding: 5px 30px;
+}
+
+</style>
+    <table id="logsTable" border="1">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Mass Rating</th>
+                <th>Punctual Rating</th>
+                <th>Halalness Rating</th>
+                <th>Location</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody id="logsTableBody">
+        </tbody>
+    </table>
+<script>
+
+document.querySelector('thead').style.display = 'none';
+
+
+
+const web3 = new Web3('http://localhost:8545'); // Connect to your local node
+const contractAddress = '0x4a679253410272dd5232b3ff7cf5dbb88f295319'; // Replace with your contract address
+const contractABI = [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "string",
+          "name": "pid",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "be",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "bet",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "k_m",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "k_p",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "k_h",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "l",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "ts",
+          "type": "uint256"
+        }
+      ],
+      "name": "Write",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_element",
+          "type": "address"
+        }
+      ],
+      "name": "addAddr",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_element",
+          "type": "address"
+        }
+      ],
+      "name": "contains",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_index",
+          "type": "uint256"
+        }
+      ],
+      "name": "get",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getAll",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_element",
+          "type": "address"
+        }
+      ],
+      "name": "removeAddr",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "size",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "pid",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "be",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "bet",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "k_m",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "k_p",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "k_h",
+          "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "l",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "ts",
+          "type": "uint256"
+        }
+      ],
+      "name": "write",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    }
+  ]; // Replace with your contract ABI
+
+// Function to connect to MetaMask and fetch logs
+async function connectAndFetchLogs() {
+    if (typeof window.ethereum !== 'undefined') {
+        try {
+            // Request account access if needed
+            await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+            // Create a new instance of Web3
+            const web3 = new Web3(window.ethereum);
+
+            // Get the connected accounts
+            const accounts = await web3.eth.getAccounts();
+            if (accounts.length === 0) {
+                console.error('No accounts found. Please ensure MetaMask is unlocked.');
+                return;
+            }
+
+            // Create the contract instance
+            const contract = new web3.eth.Contract(contractABI, contractAddress);
+
+            // Get the PID from the input field
+            const pid = document.getElementById('pidInput').value;
+            //document.getElementById('pidInput').value = '';
+
+            // Create a filter object
+            const pidHash = web3.utils.sha3(pid);
+            const eventSignature = web3.utils.sha3('Write(string,string,string,uint256,uint256,uint256,string,uint256)');
+            const filter = {
+                address: contractAddress,
+                fromBlock: 0,
+                toBlock: 'latest',
+                topics: [eventSignature, pidHash]
+            };
+
+            // Fetch the logs
+            const logs = await web3.eth.getPastLogs(filter);
+
+            // Decode the logs
+            const decodedLogs = logs.map(log => web3.eth.abi.decodeLog([
+                { type: 'string', name: 'pid', indexed: true },
+                { type: 'string', name: 'be' },
+                { type: 'string', name: 'bet' },
+                { type: 'uint256', name: 'k_m' },
+                { type: 'uint256', name: 'k_p' },
+                { type: 'uint256', name: 'k_h' },
+                { type: 'string', name: 'l' },
+                { type: 'uint256', name: 'ts' }
+            ], log.data, log.topics.slice(1)));
+
+            // Display the logs
+            displayLogs(decodedLogs);
+        } catch (error) {
+            console.error('Error connecting to MetaMask or fetching logs:', error);
+        }
+    } else {
+        console.error('MetaMask not detected');
+    }
+}
+
+// Function to display logs in the table
+function displayLogs(logs) {
+    document.querySelector('thead').style.display = 'none';
+
+    const tableBody = document.getElementById('logsTableBody');
+    tableBody.innerHTML = ''; // Clear previous results
+
+    if (logs.length > 0)
+    {      
+        document.querySelector('thead').style.display = '';
+
+    logs.forEach(log => {
+        const row = document.createElement('tr');
+
+        const beCell = document.createElement('td');
+        beCell.textContent = log.be;
+        row.appendChild(beCell);
+
+        const betCell = document.createElement('td');
+        betCell.textContent = log.bet;
+        row.appendChild(betCell);
+
+        const kmCell = document.createElement('td');
+        kmCell.textContent = log.k_m;
+        row.appendChild(kmCell);
+
+        const kpCell = document.createElement('td');
+        kpCell.textContent = log.k_p;
+        row.appendChild(kpCell);
+
+        const khCell = document.createElement('td');
+        khCell.textContent = log.k_h;
+        row.appendChild(khCell);
+
+        const lCell = document.createElement('td');
+        lCell.textContent = log.l;
+        row.appendChild(lCell);
+
+        const tsCell = document.createElement('td');
+        tsCell.textContent = log.ts;
+        row.appendChild(tsCell);
+
+        tableBody.appendChild(row);
+    });
+}
+else
+{
+    tableBody.innerHTML = 'enter a valid product id.'
+}
+
+}
+
+// Ensure the function is available to be called
+window.connectAndFetchLogs = connectAndFetchLogs;
+
+</script>
+</body>
+</html>
